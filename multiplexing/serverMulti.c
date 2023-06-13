@@ -90,4 +90,48 @@ get_max_fd(){
     return max;
 }
 
+int main(int argc, char *argv[]){
+    struct sockaddr_un name;
 
+#if 0
+    struct sockaddr_un{
+        sa_family_t sun_family; /*  F_UNIX */
+        char sun_path[108]; /*  path name  */
+    };
+#endif
+    int ret ;
+    int connection_socket;
+    int result;
+    int data;
+    char buffer[BUFFER_SIZE];
+    fd_set readfds;
+    int comm_socket_fd,i;
+    initiaze_monitor_fd_set();
+    add_to_monitored_fd_set(0);
+
+    /*  If Previous socket exits clear it it happens when 
+     *  program exited inadvertently on last run */
+
+    unlink(SOCKET_NAME);
+
+    /* Create the Master Socket */
+
+    connection_socket = socket(AF_UNIX,SOCK_STREAM,0);
+
+    if(connection_socket == -1){
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Master socket Created");
+
+    /*  initialize */
+
+    memset(&name,0, sizeof( struct sockaddr_un));
+
+    /*  Socket credentialas */
+    name.sun_family= AF_UNIX;
+    strncpy(name.sun_path,SOCKET_NAME,sizeof(name.sun_pat)-1);
+
+
+}
