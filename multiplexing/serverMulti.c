@@ -36,7 +36,7 @@ int monitored_fd_set[MAX_CLIENT_SUPPORTED];
 
 /*  Client intermediate result array */
 
-int client_result[MAX_CLENT_SUPPORTED];
+int client_result[MAX_CLIENT_SUPPORTED] ={0};
 
 /*  Remove or iniatialize the fd set */
 static void 
@@ -62,6 +62,20 @@ add_to_monitored_fd_set(int skt_fd)
         break;
     }
 }
+/* Remove_from_ Monitored fds */
+
+static void
+remove_from_monitored_fd_set(int skt_fd){
+    int i=0;
+    for(;i<MAX_CLIENT_SUPPORTED;i++){
+        if(monitored_fd_set[i]!=skt_fd){
+            continue;
+        }
+        monitored_fd_set[i] = -1;
+        break;
+    }
+}
+
 
 /*  Clone all fds in monitored_fd_set array into
  *  fd_set Data structure */
@@ -101,6 +115,7 @@ int main(int argc, char *argv[]){
 #endif
     int ret ;
     int connection_socket;
+    int data_socket;
     int result;
     int data;
     char buffer[BUFFER_SIZE];
@@ -123,7 +138,7 @@ int main(int argc, char *argv[]){
         exit(EXIT_FAILURE);
     }
 
-    printf("Master socket Created");
+    printf("Master socket Created\n");
 
     /*  initialize */
 
@@ -131,7 +146,7 @@ int main(int argc, char *argv[]){
 
     /*  Socket credentialas */
     name.sun_family= AF_UNIX;
-    strncpy(name.sun_path,SOCKET_NAME,sizeof(name.sun_pat)-1);
+    strncpy(name.sun_path,SOCKET_NAME,sizeof(name.sun_path)-1);
 
     /* BIND socket to socket name */
 
@@ -152,7 +167,7 @@ int main(int argc, char *argv[]){
     if(ret ==-1)
     {
         perror("listen");
-        exit(EXIT_FAILURE):
+        exit(EXIT_FAILURE);
     }
 
     /*  Add master socket to monitored set of fds */
@@ -163,14 +178,14 @@ int main(int argc, char *argv[]){
 
     for(;;){
         
-        referesh_fd_set(&readfds);/* Copy the entire monitored fds to readfds */
+        refresh_fd_set(&readfds);/* Copy the entire monitored fds to readfds */
         /* Wait for incomming connection */
         printf("Waiting on select() sys call\n");
 
         /* Call the selest system call, server process blocks here
          * Linux OS keep this process blocked untill the connection in
          * itiation request or data request arrives on any of the fds in readfds */
-        select(get_max_fd()+1, &readfds,NULL,NULL);
+        select(get_max_fd()+1, &readfds,NULL,NULL,NULL);
         
         if(FD_ISSET(connection_socket,&readfds)){
             /* Data arrives on master socket only when new client connection
@@ -178,11 +193,11 @@ int main(int argc, char *argv[]){
              * side */
             printf("New connection recieved recvd,accept the connection\n");
             data_socket = accept(connection_socket,NULL,NULL);
-            if(data_socket=-1){
+            if(data_socket==-1){
                 perror("accept");
                 exit(EXIT_FAILURE);
             }
-            printf("COnnection accepted form Client\n");
+            printf("Connection accepted form Client\n");
             add_to_monitored_fd_set(data_socket);
         }
         else if(FD_ISSET(0,&readfds)){
@@ -197,7 +212,7 @@ int main(int argc, char *argv[]){
             for(;i<MAX_CLIENT_SUPPORTED;i++){
 
                 if(FD_ISSET(monitored_fd_set[i],&readfds)){
-                    comm_socket_fd= monitored_f_set[i];
+                    comm_socket_fd= monitored_fd_set[i];
                     /* Prepare buffer for data */
                     memset(buffer,0,BUFFER_SIZE);
                     /* Wait for next data packet */
@@ -205,8 +220,8 @@ int main(int argc, char *argv[]){
                      *  data to arrive from client 'read' is a blocking
                      *  system call */
                     printf("Waiting for data from the client\n");
-                    ret =read(comm_socket_fd, buffer, BUUFER_SIZE);
-                    if(ret=-1){
+                    ret =read(comm_socket_fd, buffer, BUFFER_SIZE);
+                    if(ret==-1){
                         perror("read");
                         exit(EXIT_FAILURE);
                     }
@@ -219,8 +234,8 @@ int main(int argc, char *argv[]){
                        sprintf(buffer,"Result=%d",client_result[i]);
                        printf("Sending final result to client");
 
-                       ret =write(comm_socket_fd, buffer,BUFFER_size);
-                       if(ret=-1){
+                       ret =write(comm_socket_fd, buffer,BUFFER_SIZE);
+                       if(ret==-1){
                            perror("Write");
                            exit(EXIT_FAILURE);
                        }
